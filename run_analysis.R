@@ -1,9 +1,9 @@
-run_analysis <- function(outcome) {
+run_analysis <- function() {
 
+      # create directory for output files
       if(!file.exists("./data")){dir.create("./data")}
-
       
-      # read in label files
+      # read in label files (column names ang categorical activity data)
       activity.labels <- read.table("activity_labels.txt", sep = "")
       features <- read.table("features.txt", sep = "")
       
@@ -12,8 +12,6 @@ run_analysis <- function(outcome) {
       data.test <- read.table("X_test.txt", sep = "")
       activity.test <- read.table("y_test.txt", sep = "")
       colnames(data.test) <- features[,2]
-      
-      # setwd("./data")
       
       # create a new test data table which only contains columns with 'mean' or 'std' in the heading
       var.names <- c("mean", "std")
@@ -42,13 +40,13 @@ run_analysis <- function(outcome) {
       combined.data <- rbind(alltest.data, alltrain.data)
       
       # create column names for subject and activity in combined data 
-      colnames(combined.data)[1] <- "subject"
+      colnames(combined.data)[1] <- "subject.id"
       colnames(combined.data)[2] <- "activity"
       
       # replace activity numbers with activity labels by merging and then removing redundant columns 
       merged.data <- merge(activity.labels, combined.data, by.x="V1", by.y="activity")
-      merged.data$V1 <- NULL
-      colnames(merged.data)[1] <- "activity"
+      colnames(merged.data)[1] <- "activity.id"
+      colnames(merged.data)[2] <- "activity.label"
       
       # tidy up the column names to remove '-' and '()'
       old.colnames <- colnames(merged.data)
@@ -60,10 +58,21 @@ run_analysis <- function(outcome) {
       colnames(merged.data) <- new.colnames[,1]
       
       # export cleaned data set
-      write.table(merged.data, "./projectdata_1.txt", quote = FALSE, sep = " ")
+      write.table(merged.data, "./data/clean_data.txt", quote = FALSE, sep = " ")
       
-      # create and export summarised data table
-      # summary.data <- ftable(merged.data)
-      # write.table(summary.data, "./projectdata_2.txt", quote = FALSE, sep = "")
+      # create factors from numerics for id variables
+      merged.data[,1] <- as.factor(merged.data[,1])
+      merged.data[,3] <- as.factor(merged.data[,3])
+      
+      # split data and create variable names
+      split.by <- split(merged.data, list(merged.data$subject.id,merged.data$activity.label))
+      var.names <- c(colnames(merged.data))
+      var.names <- var.names[-3:0]; var.names <- var.names[-80]
+      
+      # create tidy data set
+      summary.data <- sapply(split.by, function(x) round(colMeans(x[, var.names], na.rm=TRUE), digits=6))
+
+      # export summarised data table
+      write.table(summary.data, "./data/tidy_data.txt", quote = FALSE, sep = " ")
       
 } # end function
